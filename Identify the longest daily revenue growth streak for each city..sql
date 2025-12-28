@@ -37,53 +37,53 @@ VALUES
 (845734567, '2025-08-21 07:30:00', 90024, 1120.00, 'Chennai', 'Filter Coffee'),
 (845734678, '2025-08-22 22:55:00', 90025, 950.00, 'Bangalore', 'Kebabs');
 
-with 
-cte1 as (
-select 
-  city,
-  order_date,
-  product_name,
-  sum(invoice_amount) as total_sale
-from sales
-group by city, order_date, product_name
+WITH daily_city_sales AS (
+    SELECT
+        city,
+        order_date,
+        SUM(invoice_amount) AS total_revenue
+    FROM sales
+    GROUP BY city, order_date
 ),
-cte2 as (
-select 
-  *,
-  lag(total_sale)over(partition by city order by order_date) as yesterday_sales
-from cte1
+growth_flags AS (
+    SELECT
+        city,
+        order_date,
+        total_revenue,
+        LAG(total_revenue) OVER (PARTITION BY city ORDER BY order_date) AS prev_revenue,
+        CASE WHEN total_revenue > LAG(total_revenue) OVER (PARTITION BY city ORDER BY order_date)
+             THEN 1 ELSE 0 END AS is_growth
+    FROM daily_city_sales
 ),
-
-cte3 as (
-select 
-  *,
-  (case 
-       when total_sale >= yesterday_sales then "sales Growth" 
-      when total_sale < yesterday_sales then "sales Drop"
-    end ) as growth_bucket
-from cte2
+streak_groups AS (
+    SELECT
+        city,
+        order_date,
+        total_revenue,
+        is_growth,
+        SUM(CASE WHEN is_growth = 0 THEN 1 ELSE 0 END)
+            OVER (PARTITION BY city ORDER BY order_date ROWS UNBOUNDED PRECEDING) AS streak_group_id
+    FROM growth_flags
 ),
-
-cte4 as (
-select
-  *,
-  sum( case when growth_bucket = 'sales Growth' or growth_bucket is null then 0 else 1 end)
-  over(partition by order_date, city) as streak_bucket
-from cte3
+streak_lengths AS (
+    SELECT
+        city,
+        streak_group_id,
+        COUNT(*) AS growth_streak_days,
+        MIN(order_date) AS streak_start,
+        MAX(order_date) AS streak_end
+    FROM streak_groups
+    WHERE is_growth = 1
+    GROUP BY city, streak_group_id
 )
-
-select 
-  city,
-  max(streak_lenght) as long_growth_streak
-from (
-select 
-  *,
-  row_number()over(partition by city, streak_bucket order by order_date) as streak_lenght
-from cte4
-) as d
-where growth_bucket = 'sales Growth'
-group by city
-
+SELECT
+    city,
+    MAX(growth_streak_days) AS longest_growth_streak_days,
+    MIN(streak_start) AS streak_start_date,
+    MAX(streak_end) AS streak_end_date
+FROM streak_lengths
+GROUP BY city
+ORDER BY longest_growth_streak_days DESC;
 
 
 
