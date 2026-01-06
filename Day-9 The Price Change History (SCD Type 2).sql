@@ -1,5 +1,6 @@
 """
       Q.The Price Change History (SCD Type 2)
+     Q. You have a table showing product prices updated daily. Find the date ranges (start_date to end_date) during which the price remained the same.
 """
 
 CREATE TABLE price_history (
