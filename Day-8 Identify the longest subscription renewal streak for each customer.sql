@@ -1,5 +1,5 @@
 """
-  Q. Identify the longest subscription renewal streak for each customer.
+    Q.Identify the longest subscription renewal streak for each customer.
 """
   
 create table subscriptions (
@@ -32,8 +32,7 @@ select
   user_id,
   user_signup_date,
   subscription_start,
-  subscription_end,
-  date_format(subscription_start, '%m') as month
+  subscription_end
 from subscriptions
 )
 , cte2 as (
@@ -56,9 +55,11 @@ select
 from cte2
 )
 
+-- select * from cte3
+
 select 
   user_id,
-  max(streak) as maximum_subscription_streak
+  max(streak) as "Longest Sub. Streak"
 from (
 select 
   user_id,
@@ -69,19 +70,18 @@ group by user_id, total_length
 ) as b 
 group by user_id ;
 
+
 """
-  Output => 
-
-    +---------+-----------------------------+
-    | user_id | maximum_subscription_streak |
-    +---------+-----------------------------+
-    |     101 |                           4 |
-    |     102 |                           2 |
-    |     103 |                           3 |
-    +---------+-----------------------------+
-
+  Output =>
+    +---------+---------------------+
+    | user_id | Longest Sub. Streak |
+    +---------+---------------------+
+    |     101 |                   4 |
+    |     102 |                   2 |
+    |     103 |                   3 |
+    +---------+---------------------+
+  
   """
-
 
 
 
